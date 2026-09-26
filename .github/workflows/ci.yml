@@ -1,0 +1,30 @@
+name: CI/CD Pipeline Solidaria
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  test-y-despliegue:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 1. Obtener el código
+      uses: actions/checkout@v3
+
+    - name: 2. Configurar el entorno Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: 3. Instalar las dependencias
+      run: npm install
+
+    - name: 4. Ejecutar pruebas unitarias (Jest)
+      run: npm test
+
+    # Aquí irían los pasos de despliegue si tuvieras un servidor real (AWS, Heroku, etc.)
+    - name: 5. Simulación de Despliegue
+      run: echo "Las pruebas pasaron. Desplegando en entorno de prueba..."
