@@ -7,23 +7,20 @@ const app = express();
 app.disable('x-powered-by');
 app.use(express.json());
 
-
-
-// Rutas de registro y login para usuarios
+// Ruta de salud (para comprobar que el despliegue está vivo)
 app.get('/', (req, res) => {
     res.status(200).json({ status: 'ok', servicio: 'Plataforma Solidaria API' });
 });
 
-
-
-// Rutas de autenticacion
+// Rutas públicas
+app.post('/api/register', registerUser);
 app.post('/api/login', loginUser);
 
 // Rutas protegidas
 app.get('/api/perfil', verifyToken, getProfile);
 app.get('/api/usuarios', verifyToken, requireRole('administrador'), listUsers);
 
-
+/* istanbul ignore next */
 if (require.main === module) {
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
