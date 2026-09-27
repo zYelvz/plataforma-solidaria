@@ -19,7 +19,8 @@ const verifyToken = (req, res, next) => {
     }
 };
 
-// Permite el acceso solo a los roles indicados
+
+// Middleware para verificar que el usuario tenga uno de los roles permitidos
 const requireRole = (...rolesPermitidos) => (req, res, next) => {
     if (!rolesPermitidos.includes(req.user.rol)) {
         return res.status(403).json({ error: 'No tienes permisos para acceder a este recurso' });
