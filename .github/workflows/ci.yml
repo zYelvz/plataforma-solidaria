@@ -7,24 +7,80 @@ on:
     branches: [ "main", "master" ]
 
 jobs:
-  test-y-despliegue:
+  # ---------- CI: pruebas unitarias y cobertura ----------
+  pruebas:
     runs-on: ubuntu-latest
 
     steps:
-    - name: 1. Obtener el código
-      uses: actions/checkout@v3
+      - name: 1. Obtener el código
+        uses: actions/checkout@v4
 
-    - name: 2. Configurar el entorno Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
+      - name: 2. Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
 
-    - name: 3. Instalar las dependencias
-      run: npm install
+      - name: 3. Instalar dependencias
+        run: npm ci
 
-    - name: 4. Ejecutar pruebas unitarias (Jest)
-      run: npm test
+      - name: 4. Ejecutar pruebas con cobertura (mínimo 80 %)
+        run: npm test
+        env:
+          JWT_SECRET: clave_para_pruebas_ci
 
-    # Aquí irían los pasos de despliegue si tuvieras un servidor real (AWS, Heroku, etc.)
-    - name: 5. Simulación de Despliegue
-      run: echo "Las pruebas pasaron. Desplegando en entorno de prueba..."
+      - name: 5. Guardar reporte de cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-cobertura
+          path: coverage/
+
+  # ---------- CD: despliegue automático al entorno de prueba ----------
+  despliegue-prueba:
+    needs: pruebas
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    environment: pruebas
+
+    env:
+      JWT_SECRET: clave_entorno_prueba
+      URL: http://localhost:3000
+
+    steps:
+      - name: 1. Obtener el código
+        uses: actions/checkout@v4
+
+      - name: 2. Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 3. Instalar dependencias de producción
+        run: npm ci --omit=dev
+
+      - name: 4. Desplegar la API en el entorno de prueba
+        run: |
+          nohup npm start > servidor.log 2>&1 &
+          for i in $(seq 1 20); do
+            curl -fs "$URL/" > /dev/null && echo "API desplegada y respondiendo" && exit 0
+            sleep 1
+          done
+          echo "::error::La API no arrancó"; cat servidor.log; exit 1
+
+      - name: 5. Pruebas de humo contra la API desplegada
+        run: |
+          set -e
+          echo "-> Registro de administrador"
+          curl -fs -X POST "$URL/api/register" -H "Content-Type: application/json" \
+            -d '{"nombre":"Admin","email":"admin@test.com","password":"admin123","rol":"administrador"}'
+          echo; echo "-> Login"
+          TOKEN=$(curl -fs -X POST "$URL/api/login" -H "Content-Type: application/json" \
+            -d '{"email":"admin@test.com","password":"admin123"}' | node -pe 'JSON.parse(require("fs").readFileSync(0)).token')
+          echo "Token obtenido"
+          echo "-> Ruta protegida solo para administrador"
+          curl -fs "$URL/api/usuarios" -H "Authorization: Bearer $TOKEN"
+          echo; echo "-> Acceso sin token debe ser rechazado"
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL/api/perfil")
+          [ "$CODE" = "401" ] && echo "Rechazado correctamente (401)"
