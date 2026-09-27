@@ -7,13 +7,16 @@ const app = express();
 app.disable('x-powered-by');
 app.use(express.json());
 
-// Ruta de verificacion para comprobar que el servidor está funcionando
+
+
+// Rutas de registro y login para usuarios
 app.get('/', (req, res) => {
     res.status(200).json({ status: 'ok', servicio: 'Plataforma Solidaria API' });
 });
 
-// Rutas de autenticacion 
-app.post('/api/register', registerUser);
+
+
+// Rutas de autenticacion
 app.post('/api/login', loginUser);
 
 // Rutas protegidas
