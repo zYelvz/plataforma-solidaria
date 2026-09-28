@@ -47,7 +47,7 @@ node server.js
 
 
 
-📊 Informe de Cierre y Evaluación
+Informe de Cierre y Evaluación
 
 1. Comparación detallada entre lo planificado y lo ejecutado
 
